@@ -1,5 +1,9 @@
 #include <iostream>
 #include <fstream>
+#include <ctime>
+#include <mutex>
+
+#pragma warning(disable : 4996) // disabling the compiler error. need to ommit this analyze later.
 
 
 // added enum class for the select of loglevel like information, debug and error etc.
@@ -10,10 +14,20 @@ enum class LogLevel {
     DEBUG
 };
 
+std::mutex mtx;
+
 class Logger {
 private:
     std::ofstream logFile;
+    bool fileOpened = false;
 
+    std::string timeStampForLog()
+    {
+        std::time_t now = std::time(NULL);
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now)); // uisng predefined function for the loggeing current-time in the log.
+        return buf;
+    }
 
     std::string levelToString(LogLevel level) {
         switch (level) {
@@ -31,19 +45,23 @@ private:
 
 public:
 
-    void log_filepoener(){
-        logFile.open("app.log", std::ios::app);
+    Logger(){
+        logFile.open("InnformationLogger.log", std::ios::app);
+        if (logFile.is_open())
+            fileOpened = true;
+        else
+            std::cout << ":logfile open error occured.";
     }
 
-    void log_fileCloser() {
-        if (logFile.is_open())
+    ~Logger() {
+        if (true == fileOpened)
             logFile.close();
     }
 
     void log(LogLevel level, const std::string& message) {
-        std::string logMessage ="[" +levelToString(level) + "] " + message; //printing this on the debug terminal can be commented if needed can be enabled.
-        std::cout << logMessage << std::endl;
-        if (logFile.is_open())
+        std::unique_lock<std::mutex> lock(mtx); // added this when using multi-threading so can escape form thr race condition.
+        std::string logMessage = "[" + timeStampForLog() + "] : " +  "[" + levelToString(level) + "] : " + message + "."; // calling time function to log the current time in the log file.
+        if (true == fileOpened)
             logFile << logMessage << std::endl;
     }
 };
@@ -51,14 +69,10 @@ public:
 int main() 
 {
     Logger logObj1;
-    logObj1.log_filepoener(); // added function to open the logger file
-
     logObj1.log(LogLevel::INFO, "Program started");
     logObj1.log(LogLevel::DEBUG, "Loading config");
     logObj1.log(LogLevel::WARNING, "Low memory");
     logObj1.log(LogLevel::ERROR, "Something failed");
-
-    logObj1.log_fileCloser(); // added function to close the logger file.
 
     return 0;
 }
