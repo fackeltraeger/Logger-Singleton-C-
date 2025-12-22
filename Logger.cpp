@@ -51,11 +51,14 @@ public:
 int main() 
 {
     Logger logObj1;
+    logObj1.log_filepoener(); // added function to open the logger file
 
     logObj1.log(LogLevel::INFO, "Program started");
     logObj1.log(LogLevel::DEBUG, "Loading config");
     logObj1.log(LogLevel::WARNING, "Low memory");
     logObj1.log(LogLevel::ERROR, "Something failed");
+
+    logObj1.log_fileCloser(); // added function to close the logger file.
 
     return 0;
 }
